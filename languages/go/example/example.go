@@ -10,13 +10,20 @@ import (
 
 func main() {
 	apiURL := os.Getenv("API_URL")
+	if apiURL == "" {
+		apiURL = "https://api.bitwarden.com"
+	}
 	identityURL := os.Getenv("IDENTITY_URL")
+	if identityURL == "" {
+		identityURL = "https://identity.bitwarden.com"
+	}
 
 	bitwardenClient, _ := sdk.NewBitwardenClient(&apiURL, &identityURL)
 
 	accessToken := os.Getenv("ACCESS_TOKEN")
 	organizationIDStr := os.Getenv("ORGANIZATION_ID")
 	projectName := os.Getenv("PROJECT_NAME")
+	secretKey := os.Getenv("SECRET_KEY")
 
 	if projectName == "" {
 		projectName = "NewTestProject" // default value
@@ -32,55 +39,36 @@ func main() {
 		panic(err)
 	}
 
-	project, err := bitwardenClient.Projects.Create(organizationID.String(), projectName)
+	var projectID string
+
+	projectList, err := bitwardenClient.Projects.List(organizationID.String())
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(project)
-	projectID := project.ID
-	fmt.Println(projectID)
-
-	if _, err = bitwardenClient.Projects.List(organizationID.String()); err != nil {
-		panic(err)
+	for _, project := range projectList.Data {
+		if project.Name == projectName {
+			projectID = project.ID
+		}
 	}
 
-	if _, err = bitwardenClient.Projects.Get(projectID); err != nil {
-		panic(err)
-	}
-
-	if _, err = bitwardenClient.Projects.Update(projectID, organizationID.String(), projectName+"2"); err != nil {
-		panic(err)
-	}
-
-	key := "key"
-	value := "value"
-	note := "note"
-
-	secret, err := bitwardenClient.Secrets.Create(key, value, note, organizationID.String(), []string{projectID})
+	secretsList, err := bitwardenClient.Secrets.List(organizationID.String())
 	if err != nil {
 		panic(err)
 	}
-	secretID := secret.ID
-
-	if _, err = bitwardenClient.Secrets.List(organizationID.String()); err != nil {
-		panic(err)
+	var secretValue string
+	for _, secret := range secretsList.Data {
+		if secret.Key == secretKey {
+			s, err := bitwardenClient.Secrets.Get(secret.ID)
+			if err != nil {
+				panic(err)
+			}
+			if *s.ProjectID == projectID {
+				secretValue = s.Value
+			}
+		}
 	}
 
-	if _, err = bitwardenClient.Secrets.Get(secretID); err != nil {
-		panic(err)
-	}
-
-	if _, err = bitwardenClient.Secrets.Update(secretID, key, value, note, organizationID.String(), []string{projectID}); err != nil {
-		panic(err)
-	}
-
-	if _, err = bitwardenClient.Secrets.Delete([]string{secretID}); err != nil {
-		panic(err)
-	}
-
-	if _, err = bitwardenClient.Projects.Delete([]string{projectID}); err != nil {
-		panic(err)
-	}
+	fmt.Println(secretValue)
 
 	defer bitwardenClient.Close()
 }
