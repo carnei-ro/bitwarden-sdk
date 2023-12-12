@@ -23,6 +23,15 @@ This example works with SaaS version, simply export:
 
 Then run `./example` and you should see the secret value printed.
 
-## TODO
+## Run as Docker
 
-Needs to understand why it is printing values after an API Call (such as for login, list projects, list secrets, get secrets, etc.)
+Build the image with `docker build -t example .` then run it with:
+
+```bash
+docker run -it --rm \
+  -e ACCESS_TOKEN=... \
+  -e ORGANIZATION_ID=... \
+  -e PROJECT_NAME=... \
+  -e SECRET_KEY=... \
+  example
+```
